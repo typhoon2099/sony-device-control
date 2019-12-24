@@ -1,5 +1,6 @@
 import requests
 import xml.etree.ElementTree as ET
+from .ircc import Ircc
 
 
 class SonyDevice(object):
@@ -7,6 +8,7 @@ class SonyDevice(object):
         self._host = "http://{}".format(host)
         self._device_id = device_id
         self._device_name = device_name
+        self.ircc = Ircc(host, device_id, device_name)
 
     def action_list(self):
         path = "{}:50002/actionList".format(self._host)
@@ -54,36 +56,6 @@ class SonyDevice(object):
         response = requests.get(get_status_path, headers=self.headers())
 
         return response.status_code == 200
-
-    def get_remote_command_list(self):
-        path = "{}:50002/getRemoteCommandList".format(self._host)
-
-        response = requests.get(path, headers=self.headers())
-        print(response.text)
-
-    def play(self):
-        command = "AAAAAwAAHFoAAAA9Aw=="
-        path = "{}:50001/upnp/control/IRCC".format(self._host)
-
-        root = ET.Element("s:Envelope", {
-            "xmlns:s": "http://schemas.xmlsoap.org/soap/envelope/",
-            "s:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/",
-        })
-        body = ET.SubElement(root, "s:Body")
-        sendIRCC = ET.SubElement(body, "u:X_SendIRCC", {
-            "xmlns:u": "urn:schemas-sony-com:service:IRCC:1",
-        })
-        irccCode = ET.SubElement(sendIRCC, "IRCCCode")
-        irccCode.text = command
-
-        xml = str.encode("<?xml version=\"1.0\"?>") + ET.tostring(root)
-
-        headers = {
-            "Content-Type": "text/xml; charset=utf-8",
-            "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
-        }
-
-        response = requests.post(path, headers=headers, data=xml)
 
     def headers(self):
         return {
