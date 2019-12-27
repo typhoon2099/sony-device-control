@@ -20,7 +20,12 @@ class Ircc(object):
                 self._commands[command.attrib["name"]] = command.attrib["value"]
 
     def send(self, command):
-        ircc_value = self._commands[command]
+        try:
+            ircc_value = self._commands[command]
+        except KeyError:
+            print('Command "{}" not found'.format(command))
+            raise ValueError
+
 
         nsmap = {
             "s": "http://schemas.xmlsoap.org/soap/envelope/",
