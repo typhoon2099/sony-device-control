@@ -19,6 +19,9 @@ class Ircc(object):
             if command.attrib["type"] == "ircc":
                 self._commands[command.attrib["name"]] = command.attrib["value"]
 
+    def commands(self):
+        return list(self._commands.keys())
+
     def send(self, command):
         try:
             ircc_value = self._commands[command]
