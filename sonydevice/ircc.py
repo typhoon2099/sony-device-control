@@ -1,5 +1,6 @@
 import requests
-import xml.etree.ElementTree as ET
+import urllib.parse
+from lxml import etree
 
 
 class Ircc(object):
@@ -14,35 +15,47 @@ class Ircc(object):
         path = "{}:50002/getRemoteCommandList".format(self._host)
         response = requests.get(path, headers=self.headers())
 
-        for command in ET.fromstring(response.text).findall("command"):
+        for command in etree.fromstring(bytes(response.text, encoding='utf8')).findall("command"):
             if command.attrib["type"] == "ircc":
-                name = command.attrib["name"]
-                value = command.attrib["value"]
-                self._commands[name] = value
+                self._commands[command.attrib["name"]] = command.attrib["value"]
 
     def send(self, command):
         ircc_value = self._commands[command]
-        path = "{}:50001/upnp/control/IRCC".format(self._host)
 
-        root = ET.Element("s:Envelope", {
-            "xmlns:s": "http://schemas.xmlsoap.org/soap/envelope/",
-            "s:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/",
-        })
-        body = ET.SubElement(root, "s:Body")
-        sendIRCC = ET.SubElement(body, "u:X_SendIRCC", {
-            "xmlns:u": "urn:schemas-sony-com:service:IRCC:1",
-        })
-        irccCode = ET.SubElement(sendIRCC, "IRCCCode")
-        irccCode.text = ircc_value
+        nsmap = {
+            "s": "http://schemas.xmlsoap.org/soap/envelope/",
+        }
 
-        xml = str.encode("<?xml version=\"1.0\"?>") + ET.tostring(root)
+        root = etree.Element("{%s}Envelope" % nsmap["s"], {
+            "{%s}encodingStyle" % nsmap["s"]: "http://schemas.xmlsoap.org/soap/encoding/",
+        }, nsmap=nsmap)
+        body = etree.SubElement(root, "{%s}Body" % nsmap["s"])
+        send_ircc = etree.SubElement(body, "{%s}X_SendIRCC" % "urn:schemas-sony-com:service:IRCC:1", nsmap={
+            "u": "urn:schemas-sony-com:service:IRCC:1",
+        })
+        etree.SubElement(send_ircc, "IRCCCode").text = ircc_value
+
+        xml = str.encode("<?xml version=\"1.0\"?>") + etree.tostring(root)
 
         headers = {
             "Content-Type": "text/xml; charset=utf-8",
             "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
         }
 
-        requests.post(path, headers=headers, data=xml)
+        response = requests.post(self.__control_url(), headers=headers, data=xml)
+
+        return response.status_code == 200
+
+    def __control_url(self):
+        path = "{}:50001/Ircc.xml".format(self._host)
+        response = requests.get(path)
+        xml = etree.fromstring(bytes(response.text, encoding='utf8'))
+        control_url_element = xml.xpath(
+            ".//u:serviceType[.='urn:schemas-sony-com:service:IRCC:1']/following-sibling::u:controlURL",
+            namespaces={'u': 'urn:schemas-upnp-org:device-1-0'},
+        )
+
+        return urllib.parse.urljoin(path, control_url_element[0].text)
 
     def headers(self):
         return {
