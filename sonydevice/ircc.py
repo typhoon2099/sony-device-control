@@ -15,7 +15,7 @@ class Ircc(object):
         path = "{}:50002/getRemoteCommandList".format(self._host)
         response = requests.get(path, headers=self.headers())
 
-        for command in etree.fromstring(bytes(response.text, encoding='utf8')).findall("command"):
+        for command in etree.fromstring(bytes(response.text, encoding='utf8')).iterfind("command"):
             if command.attrib["type"] == "ircc":
                 self._commands[command.attrib["name"]] = command.attrib["value"]
 
