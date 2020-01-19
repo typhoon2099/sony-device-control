@@ -1,12 +1,19 @@
 import socket
 import struct
 import re
+import requests
+import urllib.parse
+from lxml import etree
 
 
 class Discovery(object):
     MULTICAST_IP = '239.255.255.250'
     MULTICAST_PORT = 1900
     MULTICAST_GROUP = (MULTICAST_IP, MULTICAST_PORT)
+    NAMESPACES = {
+        "u": "urn:schemas-upnp-org:device-1-0",
+        "av": "urn:schemas-sony-com:av",
+    }
 
     @classmethod
     def find_devices(cls):
@@ -61,3 +68,29 @@ USER-AGENT: SonyDevice/1.0
             sock.close()
 
             return devices
+
+    @classmethod
+    def find_services(cls, uri):
+        response = requests.get(uri)
+        xml = etree.fromstring(bytes(response.text, encoding="utf8"))
+
+        services = xml.findall("u:device/u:serviceList/u:service", namespaces=cls.NAMESPACES)
+
+        output = {}
+
+        for service in services:
+            serviceType = service.find("u:serviceType", namespaces=cls.NAMESPACES).text
+            domain = serviceType.split(":")[1]
+
+            serviceName = service.find("u:serviceId", namespaces=cls.NAMESPACES).text.split(":")[-1]
+
+            if domain not in output:
+                output[domain] = {}
+
+            controlURL = service.find("u:controlURL", namespaces=cls.NAMESPACES).text
+
+            output[domain][serviceName] = {
+                "url": urllib.parse.urljoin(uri, controlURL),
+            }
+
+        return output
