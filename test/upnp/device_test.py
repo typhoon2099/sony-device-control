@@ -1,4 +1,4 @@
-from upnp.discovery import Discovery
+from upnp.device import Device
 from mock import patch
 
 
@@ -8,7 +8,8 @@ def test_finds_services():
         with open('./test/tv.xml', 'r') as file:
             mock_request.return_value.text = file.read()
 
-        services = Discovery.find_services("http://192.168.1.68:52323/dmr.xml")
+        services = Device("http://192.168.1.68:52323/dmr.xml").services()
+
 
     expected = {
         "schemas-upnp-org": {
@@ -61,5 +62,8 @@ def test_finds_services():
             },
         },
     }
+    print(services)
+    print("=====")
+    print(expected)
 
     assert services == expected

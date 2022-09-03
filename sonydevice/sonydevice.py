@@ -29,9 +29,8 @@ class SonyDevice(object):
         return output
     
     def device_info(self):
-        path = "{}:52323/dmr.xml".format(self._host)
+        path = "{}:52323/tv.xml".format(self._host)
         response = requests.get(path, headers=self.headers())
-        print(response.text)
         xml = etree.fromstring(bytes(response.text, encoding="utf8"))
 
         device = xml.find("u:device", namespaces=self.NAMESPACES)
