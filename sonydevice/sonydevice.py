@@ -29,7 +29,7 @@ class SonyDevice(object):
         return output
     
     def device_info(self):
-        path = "{}:52323/tv.xml".format(self._host)
+        path = "{}:52323/dmr.xml".format(self._host)
         response = requests.get(path, headers=self.headers())
         xml = etree.fromstring(bytes(response.text, encoding="utf8"))
 
@@ -105,7 +105,7 @@ class SonyDevice(object):
         return self.renew()
 
     def register(self, pin=None):
-        path = "{}:50002/register".format(self._host)
+        path = "{}50002/register".format(self._host)
 
         auth = ('', pin) if pin is not None else None
 
